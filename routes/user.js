@@ -1,10 +1,12 @@
 const router = require("express").Router();
 const User = require("../models/Users");
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const { createAccessToken } = require("../libs/jwt");
 const { authRequired } = require("../middlewares/validateToken");
 const { validetaSchema } = require("../middlewares/validator.middlewares");
 const { registerSchema, loginSchema } = require("../schemas/auth.schema");
+const { TOKEN_SECRET } = require("../config");
 
 router.get("/", async (req, res) => {
   const users = await User.findAll();
@@ -72,6 +74,27 @@ router.get("/profile", authRequired, async (req, res) => {
     email: userFound.email,
     createdAt: userFound.createdAt,
     updatedAt: userFound.updatedAt,
+  });
+});
+
+router.get("/verify", async (req, res) => {
+  const { token } = req.cookies;
+
+  if (!token) return res.status(401).send({ message: "No autorizado" });
+
+  jwt.verify(token, TOKEN_SECRET, async (err, user) => {
+    if (err) return res.status(401).send({ message: "No autorizado" });
+
+    const userFound = await User.findByPk(user.id);
+    if (!userFound) return res.status(401).send({ message: "No autorizado" });
+
+    return res.send({
+      id: userFound.id,
+      name: userFound.name,
+      email: userFound.email,
+      createdAt: userFound.createdAt,
+      updatedAt: userFound.updatedAt,
+    });
   });
 });
 
